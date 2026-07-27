@@ -1428,6 +1428,7 @@ function openAddDebtModal(preselectedDebtorId = null) {
     document.getElementById("debt-village").value = "";
   }
   
+  updateDebtRowsVisibility();
   openModal("modal-debt");
 }
 
@@ -1484,6 +1485,7 @@ function openEditDebtModal(debtId) {
   });
 
   calculateFormTotal();
+  updateDebtRowsVisibility();
 
   document.getElementById("modal-debt-title").textContent = i18n[appState.currentLang].action_edit;
 
@@ -1638,6 +1640,56 @@ function calculateFormTotal() {
   const totalInput = document.getElementById("debt-total-amount");
   if (totalInput) {
     totalInput.value = total.toLocaleString() + " ៛";
+  }
+}
+
+function updateDebtRowsVisibility() {
+  const rows = document.querySelectorAll(".debt-item-row");
+  if (rows.length === 0) return;
+
+  const hasAnyInput = (row) => {
+    const select = row.querySelector(".item-select");
+    const customText = row.querySelector(".item-custom-text");
+    const priceInp = row.querySelector(".item-price");
+    const qtyInp = row.querySelector(".item-qty");
+
+    const hasItemSelect = select && select.value !== "";
+    const hasCustomText = customText && customText.value.trim() !== "";
+    const hasPrice = priceInp && priceInp.value.trim() !== "";
+    const hasQty = qtyInp && qtyInp.value.trim() !== "";
+
+    return hasItemSelect || hasCustomText || hasPrice || hasQty;
+  };
+
+  const isCompletelyFilled = (row) => {
+    const select = row.querySelector(".item-select");
+    const customText = row.querySelector(".item-custom-text");
+    const priceInp = row.querySelector(".item-price");
+    const qtyInp = row.querySelector(".item-qty");
+
+    const hasItemSelect = select && select.value !== "";
+    const hasPrice = priceInp && priceInp.value.trim() !== "";
+    const hasQty = qtyInp && qtyInp.value.trim() !== "";
+
+    let isCustomValid = true;
+    if (select && select.value === "Other") {
+      isCustomValid = customText && customText.value.trim() !== "";
+    }
+
+    return hasItemSelect && hasPrice && hasQty && isCustomValid;
+  };
+
+  // Row 1 is always visible
+  rows[0].style.display = "";
+
+  // For subsequent rows, show if the previous row is visible and completely filled, or if the current row has some input (e.g. edit mode)
+  for (let i = 1; i < rows.length; i++) {
+    const prevRowVisible = rows[i - 1].style.display !== "none";
+    const prevRowCompletelyFilled = isCompletelyFilled(rows[i - 1]);
+    const currentHasInput = hasAnyInput(rows[i]);
+
+    const shouldShow = (prevRowVisible && prevRowCompletelyFilled) || currentHasInput;
+    rows[i].style.display = shouldShow ? "" : "none";
   }
 }
 
@@ -2535,10 +2587,23 @@ function initEventHandlers() {
         qtyInp.value = "";
       }
       calculateFormTotal();
+      updateDebtRowsVisibility();
     });
 
-    priceInp.addEventListener("input", calculateFormTotal);
-    qtyInp.addEventListener("input", calculateFormTotal);
+    customText.addEventListener("input", () => {
+      calculateFormTotal();
+      updateDebtRowsVisibility();
+    });
+
+    priceInp.addEventListener("input", () => {
+      calculateFormTotal();
+      updateDebtRowsVisibility();
+    });
+
+    qtyInp.addEventListener("input", () => {
+      calculateFormTotal();
+      updateDebtRowsVisibility();
+    });
   });
 
   // Debtor Detail Modal inner actions hooks
